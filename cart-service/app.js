@@ -53,7 +53,19 @@ app.post("/cart", async (req, res) => {
   });
 
   const cart = JSON.parse(cartData || "[]");
-  cart.push(product);
+  var found = false;
+
+  cart.forEach((item) => {
+    if (item.id === product.id) {
+      item.quantity += 1;
+      found = true;
+    }
+  });
+
+  if (!found) {
+    product.quantity = 1;
+    cart.push(product);
+  }
 
   // Store the updated cart data in Redis
   redisClient.set("cart", JSON.stringify(cart), (error) => {
@@ -66,18 +78,62 @@ app.post("/cart", async (req, res) => {
 });
 
 // Resets user's cart
-app.delete("/cart", async (req, res) => {
-  console.log("[DELETE] /cart");
+app.delete("/cart/:productId", async (req, res) => {
+  const delete_id = req.params.productId;
+  console.log(`[DELETE] /cart/${delete_id}`);
+  console.log(delete_id);
+  const cartData = await redisClient.get("cart", (error, cartData) => {
+    if (error) {
+      console.error("Error retrieving cart data from Redis:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
 
-  redisClient.set("cart", JSON.stringify([]), (error) => {
+    return cartData;
+  });
+
+  cart = JSON.parse(cartData);
+  const updatedCart = cart.filter((item) => item.id != delete_id);
+
+  cart = updatedCart;
+
+  redisClient.set("cart", JSON.stringify(cart), (error) => {
     if (error) {
       console.error("Error storing cart data in Redis:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
   });
-  res.json({ message: "Cart is reset" });
+  res.json({ message: `Successfuly deleted product with id ${delete_id}` });
 });
 
+app.put("/cart/:productId/:newQuantity", async (req, res) => {
+  const productId = req.params.productId;
+  const newQuantity = Number(req.params.newQuantity);
+  console.log(`[PUT] /cart/${productId}/${newQuantity}`);
+
+  const cartData = await redisClient.get("cart", (error, cartData) => {
+    if (error) {
+      console.error("Error retrieving cart data from Redis:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    return cartData;
+  });
+
+  cart = JSON.parse(cartData);
+  cart.forEach((item) => {
+    if (item.id == productId) item.quantity = newQuantity;
+  });
+
+  redisClient.set("cart", JSON.stringify(cart), (error) => {
+    if (error) {
+      console.error("Error storing cart data in Redis:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  res.json({
+    message: `Successfuly updated product with id ${productId} to quantity: ${newQuantity}`,
+  });
+});
 // Start the server
 
 app.get("/healthcheck", (req, res) => {
