@@ -1,10 +1,15 @@
 const net = require("net");
-const http = require("http");
-const url = require("url");
-
+const { ec } = require("elliptic");
 require("dotenv").config();
 
+const curve = new ec("secp256k1");
+
+// Load the private key from environment variables
 const serviceUrls = process.env.SERVICE_URLS.split(" ");
+
+const privateKey = process.env.LB_CART_KEY;
+const keyPair = curve.keyFromPrivate(privateKey);
+
 const serviceWeights = process.env.SERVICE_WEIGHTS.split(" ").map(Number);
 const port = process.env.PORT;
 
@@ -45,12 +50,16 @@ function forwardRequest(urlStr, method, path, body, socket) {
   console.log(`---forwarding to`);
   console.log(`${method} ${hostname}:${port}${path} `);
   console.log(`${body}`);
+  const signature = keyPair.sign("magicword");
+  //const signature = keyPair.sign("wrong_signature");
 
   const headers = {
     "Content-Type": "application/json",
     "Content-Length": Buffer.byteLength(body),
     Connection: "close", // Force HTTP/1.1 behavior
+    Signature: JSON.stringify(signature),
   };
+
   let requestString = `${method} ${path} HTTP/1.1\r\n`;
   Object.keys(headers).forEach((header) => {
     requestString += `${header}: ${headers[header]}\r\n`;

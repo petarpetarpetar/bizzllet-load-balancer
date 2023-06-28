@@ -1,6 +1,16 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const redis = require("redis");
+const { ec } = require("elliptic");
+require("dotenv").config();
+
+const curve = new ec("secp256k1");
+
+// Obtain the public key
+const publicKey = process.env.LB_CART_KEY;
+
+// Create a key pair from the public key
+const keyPair = curve.keyFromPublic(publicKey, "hex");
 
 console.log("change");
 function connectToRedis() {
@@ -44,7 +54,19 @@ redisClient
   });
 
 const app = express();
+
 app.use(bodyParser.json());
+
+app.use((req, res, next) => {
+  const signature = JSON.parse(req.get("Signature"));
+  const isValid = keyPair.verify("magicword", signature);
+
+  if (isValid) next();
+  else
+    res
+      .status(401)
+      .json({ message: "Only my load balancer can talk to me :)" });
+});
 
 // Get all products from user's cart
 app.get("/cart", async (req, res) => {
