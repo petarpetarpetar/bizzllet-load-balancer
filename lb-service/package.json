@@ -1,0 +1,17 @@
+{
+  "name": "lb-service",
+  "version": "1.0.0",
+  "description": "Load balancer service for bizzllet homework",
+  "main": "src/loadbalancer.js",
+  "scripts": {
+    "lb": "cd src && nodemon loadbalancer.js"
+  },
+  "author": "Petar Markovic",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1"
+  }
+}

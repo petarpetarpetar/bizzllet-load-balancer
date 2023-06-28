@@ -1,3 +1,4 @@
 # bizzllet-load-balancer
 
-npm
+docker-compose build
+docker-compose up

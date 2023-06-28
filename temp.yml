@@ -1,0 +1,38 @@
+version: "3.8"
+services:
+  cart-1:
+    build:
+      context: ./cart-service
+    ports:
+      - "3001:3001"
+    depends_on:
+      - redis
+
+  cart-2:
+    build:
+      context: ./cart-service
+    ports:
+      - "3002:3002"
+    depends_on:
+      - redis
+
+  load-balancer:
+    build:
+      context: ./lb-service
+    ports:
+      - "5000:5000"
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:6.2-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+      - storage:/data
+
+volumes:
+  storage:
+    driver: local

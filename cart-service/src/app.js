@@ -2,9 +2,35 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const redis = require("redis");
 
-const redisClient = redis.createClient();
+console.log("change");
+function connectToRedis() {
+  const redisClient = redis.createClient({
+    socket: {
+      host: "redis",
+      port: "6379",
+    },
+  });
 
-const port = Number(process.argv.slice(2)[0]);
+  redisClient.on("error", (error) => {
+    console.error("Error connecting to Redis:", error);
+
+    setTimeout(connectToRedis, 500);
+  });
+
+  redisClient.on("connect", () => {
+    console.log("Connected to Redis");
+  });
+
+  // Perform your Redis operations using the `redisClient` instance
+
+  return redisClient;
+}
+
+// Call the function to establish the initial connection
+const redisClient = connectToRedis();
+
+console.log("App run");
+const port = 3000; //Number(process.argv.slice(2)[0]);
 
 redisClient.on("error", (err) => console.log("Redis Client Error", err));
 redisClient

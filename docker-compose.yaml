@@ -1,0 +1,56 @@
+version: "3.8"
+services:
+  redis:
+    image: redis:6.2-alpine
+    restart: always
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+      - storage:/data
+
+  cart-1:
+    build:
+      context: ./cart-service/
+      dockerfile: Dockerfile
+
+    stdin_open: true
+    depends_on:
+      - redis
+
+  cart-2:
+    build:
+      context: ./cart-service/
+      dockerfile: Dockerfile
+
+    stdin_open: true
+    depends_on:
+      - redis
+
+  cart-3:
+    build:
+      context: ./cart-service/
+      dockerfile: Dockerfile
+
+    stdin_open: true
+    depends_on:
+      - redis
+
+  cart-4:
+    build:
+      context: ./cart-service/
+      dockerfile: Dockerfile
+
+    stdin_open: true
+    depends_on:
+      - redis
+
+  load-balancer:
+    build:
+      context: ./lb-service/
+      dockerfile: Dockerfile
+
+    ports:
+      - "5000:5000"
+
+volumes:
+  storage:
+    driver: local

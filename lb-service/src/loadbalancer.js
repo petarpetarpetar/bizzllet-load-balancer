@@ -46,42 +46,45 @@ function forwardRequest(urlStr, method, path, body, socket) {
   console.log(`${method} ${hostname}:${port}${path} `);
   console.log(`${body}`);
 
-  const options = {
-    hostname: hostname,
+  const headers = {
+    "Content-Type": "application/json",
+    "Content-Length": Buffer.byteLength(body),
+    Connection: "close", // Force HTTP/1.1 behavior
+  };
+  let requestString = `${method} ${path} HTTP/1.1\r\n`;
+  Object.keys(headers).forEach((header) => {
+    requestString += `${header}: ${headers[header]}\r\n`;
+  });
+  requestString += "\r\n" + body;
+
+  const socketOptions = {
+    host: hostname,
     port: port,
-    path: path,
-    method: method,
-    headers: {
-      "Content-Type": "application/json",
-      "Content-Length": Buffer.byteLength(body),
-      Connection: "close", // Force HTTP/1.1 behavior
-    },
   };
 
-  const req = http.request(options, (res) => {
-    res.setEncoding("utf8");
-    let responseData = "";
-    res.on("data", (chunk) => {
-      responseData += chunk;
-    });
-
-    res.on("end", () => {
-      console.log(responseData);
-      // Write the response data to the socket
-      socket.write(
-        `HTTP/1.1 200 OK\r\nnContent-Length: ${responseData.length}\r\n\r\n${responseData}`
-      );
-      socket.end();
-    });
+  const clientSocket = net.createConnection(socketOptions, () => {
+    clientSocket.write(requestString);
   });
 
-  req.on("error", (error) => {
-    console.error(`Error forwarding request to ${urlStr}: ${error.message}`);
+  let responseData = "";
+
+  clientSocket.setEncoding("utf8");
+
+  clientSocket.on("data", (chunk) => {
+    responseData += chunk;
+  });
+
+  clientSocket.on("end", () => {
+    console.log(responseData);
+    const responseHeaders = `HTTP/1.1 200 OK\r\nContent-Length: ${responseData.length}\r\n\r\n`;
+    socket.write(responseHeaders + responseData);
     socket.end();
   });
 
-  req.write(body);
-  req.end();
+  clientSocket.on("error", (error) => {
+    console.error(`Error forwarding request to ${urlStr}: ${error.message}`);
+    socket.end();
+  });
 }
 
 // Start the Load balancer
